@@ -144,6 +144,7 @@ export default function EmployeeEditor() {
     } catch (err) {
       setFormError(err.message)
     } finally {
+      setDeleteDialogOpen(false)
       setEmployeeToDelete(null)
     }
   }

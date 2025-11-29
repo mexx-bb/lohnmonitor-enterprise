@@ -333,28 +333,34 @@ router.delete('/:id', requireRole(ROLES.ADMIN), [
     }
 
     if (hardDelete === 'true') {
-      // Hartes Löschen - erst verknüpfte Notifications löschen
-      const deletedNotifications = await prisma.notification.deleteMany({
-        where: { employeeId: id }
-      });
+      // Hartes Löschen in einer Transaktion
+      const result = await prisma.$transaction(async (tx) => {
+        // Erst verknüpfte Notifications löschen
+        const deletedNotifications = await tx.notification.deleteMany({
+          where: { employeeId: id }
+        });
 
-      // Dann Mitarbeiter löschen
-      await prisma.employee.delete({
-        where: { id }
-      });
+        // Dann Mitarbeiter löschen
+        await tx.employee.delete({
+          where: { id }
+        });
 
-      await prisma.auditLog.create({
-        data: {
-          userId: req.user.id,
-          action: 'DELETE_EMPLOYEE',
-          details: JSON.stringify({ 
-            id,
-            personalnummer: existing.personalnummer,
-            name: existing.name,
-            deletedNotifications: deletedNotifications.count,
-            deletedBy: req.user.username 
-          })
-        }
+        // Audit Log erstellen
+        await tx.auditLog.create({
+          data: {
+            userId: req.user.id,
+            action: 'DELETE_EMPLOYEE',
+            details: JSON.stringify({ 
+              id,
+              personalnummer: existing.personalnummer,
+              name: existing.name,
+              deletedNotifications: deletedNotifications.count,
+              deletedBy: req.user.username 
+            })
+          }
+        });
+
+        return { deletedNotifications: deletedNotifications.count };
       });
 
       res.json({ success: true, message: 'Mitarbeiter endgültig gelöscht' });
