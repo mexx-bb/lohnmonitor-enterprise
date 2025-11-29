@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { LogIn, AlertCircle, User, Lock } from 'lucide-react'
@@ -8,9 +8,26 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [firmaName, setFirmaName] = useState('Lohnmonitor')
   
   const { login } = useAuth()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    fetchFirmaName()
+  }, [])
+
+  const fetchFirmaName = async () => {
+    try {
+      const res = await fetch('/api/settings/public')
+      if (res.ok) {
+        const data = await res.json()
+        setFirmaName(data.firma_name || 'Lohnmonitor')
+      }
+    } catch (err) {
+      console.error('Failed to load company name:', err)
+    }
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -27,15 +44,18 @@ export default function Login() {
     }
   }
 
+  // Get first letter for logo
+  const logoLetter = firmaName.charAt(0).toUpperCase()
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-2xl shadow-lg mb-4">
-            <span className="text-4xl font-bold text-primary-600">L</span>
+            <span className="text-4xl font-bold text-primary-600">{logoLetter}</span>
           </div>
-          <h1 className="text-3xl font-bold text-white">Lohnmonitor</h1>
+          <h1 className="text-3xl font-bold text-white">{firmaName}</h1>
           <p className="text-primary-200 mt-2">Enterprise Edition</p>
         </div>
 
@@ -103,8 +123,8 @@ export default function Login() {
 
         {/* Footer */}
         <div className="text-center mt-6 text-primary-200 text-sm">
-          <p>Lohnmonitor Enterprise v3.0.0</p>
-          <p className="mt-1">© 2025 Pflegedienst</p>
+          <p>{firmaName} Enterprise v3.0.0</p>
+          <p className="mt-1">© 2025</p>
         </div>
       </div>
     </div>

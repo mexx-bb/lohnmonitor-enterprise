@@ -10,13 +10,30 @@ import {
   X,
   User
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function Navigation() {
   const { user, logout, isAdmin } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [firmaName, setFirmaName] = useState('Lohnmonitor')
+
+  useEffect(() => {
+    fetchFirmaName()
+  }, [])
+
+  const fetchFirmaName = async () => {
+    try {
+      const res = await fetch('/api/settings/public')
+      if (res.ok) {
+        const data = await res.json()
+        setFirmaName(data.firma_name || 'Lohnmonitor')
+      }
+    } catch (err) {
+      console.error('Failed to load company name:', err)
+    }
+  }
 
   const handleLogout = async () => {
     await logout()
@@ -31,6 +48,9 @@ export default function Navigation() {
 
   const isActive = (path) => location.pathname === path
 
+  // Get first letter for logo
+  const logoLetter = firmaName.charAt(0).toUpperCase()
+
   return (
     <nav className="bg-primary-700 text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4">
@@ -39,9 +59,9 @@ export default function Navigation() {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-primary-700 font-bold text-lg">L</span>
+                <span className="text-primary-700 font-bold text-lg">{logoLetter}</span>
               </div>
-              <span className="font-bold text-xl hidden sm:block">Lohnmonitor</span>
+              <span className="font-bold text-xl hidden sm:block">{firmaName}</span>
             </Link>
           </div>
 

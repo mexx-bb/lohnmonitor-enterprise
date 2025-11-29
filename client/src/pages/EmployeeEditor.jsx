@@ -11,7 +11,9 @@ import {
   FileSpreadsheet,
   RefreshCw,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react'
 
 const ENTGELTGRUPPEN = ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12', 'E13', 'E14']
@@ -28,6 +30,8 @@ export default function EmployeeEditor() {
   const [successMessage, setSuccessMessage] = useState('')
   const [showInactive, setShowInactive] = useState(false)
   const [alarmThreshold, setAlarmThreshold] = useState(40)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [employeeToDelete, setEmployeeToDelete] = useState(null)
 
   const [formData, setFormData] = useState({
     personalnummer: '',
@@ -122,16 +126,25 @@ export default function EmployeeEditor() {
     setFormError('')
   }
 
-  const handleDelete = async (employee) => {
-    if (!confirm(`Mitarbeiter "${employee.name}" wirklich deaktivieren?`)) return
+  const handleDelete = (employee) => {
+    setEmployeeToDelete(employee)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!employeeToDelete) return
 
     try {
-      await del(`/api/employees/${employee.id}`)
-      setSuccessMessage('Mitarbeiter deaktiviert')
+      // Use hard delete with ?hardDelete=true query parameter
+      await del(`/api/employees/${employeeToDelete.id}?hardDelete=true`)
+      setSuccessMessage('Mitarbeiter endgültig gelöscht')
       setTimeout(() => setSuccessMessage(''), 3000)
       loadEmployees()
     } catch (err) {
       setFormError(err.message)
+    } finally {
+      setShowDeleteConfirm(false)
+      setEmployeeToDelete(null)
     }
   }
 
@@ -474,6 +487,63 @@ export default function EmployeeEditor() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && employeeToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertTriangle size={24} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Mitarbeiter löschen</h3>
+                  <p className="text-sm text-gray-500">Diese Aktion kann nicht rückgängig gemacht werden!</p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Name:</strong> {employeeToDelete.name}
+                </p>
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Personalnummer:</strong> {employeeToDelete.personalnummer}
+                </p>
+                {employeeToDelete.abteilung && (
+                  <p className="text-sm text-gray-600">
+                    <strong>Abteilung:</strong> {employeeToDelete.abteilung}
+                  </p>
+                )}
+              </div>
+
+              <p className="text-sm text-red-600 mb-6">
+                ⚠️ Der Mitarbeiter und alle zugehörigen Daten (Benachrichtigungen, etc.) werden endgültig gelöscht.
+              </p>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteConfirm(false)
+                    setEmployeeToDelete(null)
+                  }}
+                  className="btn btn-secondary"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  className="btn btn-danger flex items-center gap-2"
+                  disabled={loading}
+                >
+                  <Trash2 size={18} />
+                  {loading ? 'Lösche...' : 'Endgültig löschen'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

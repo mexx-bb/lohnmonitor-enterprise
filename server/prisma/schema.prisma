@@ -87,7 +87,7 @@ model Notification {
   acknowledgedBy String?  @map("acknowledged_by")
   createdAt    DateTime  @default(now()) @map("created_at")
 
-  employee Employee @relation(fields: [employeeId], references: [id])
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }

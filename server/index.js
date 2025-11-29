@@ -68,6 +68,24 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Public Settings (available without authentication)
+const { PrismaClient } = require('@prisma/client');
+const prismaPublic = new PrismaClient();
+
+app.get('/api/settings/public', async (req, res) => {
+  try {
+    const firmaSetting = await prismaPublic.setting.findUnique({
+      where: { key: 'firma_name' }
+    });
+    res.json({ 
+      firma_name: firmaSetting?.value || 'Lohnmonitor'
+    });
+  } catch (error) {
+    console.error('Error fetching public settings:', error);
+    res.json({ firma_name: 'Lohnmonitor' });
+  }
+});
+
 // Error Handler
 app.use((err, req, res, next) => {
   console.error('Server Error:', err);
