@@ -97,15 +97,22 @@ async function checkStufenaufstiege() {
 
 /**
  * Initialisiert die Cron-Jobs
+ * Der Zeitpunkt kann über CRON_SCHEDULE in der .env konfiguriert werden
+ * Format: Standard Cron-Syntax (minute hour day month weekday)
+ * Default: '0 8 * * *' = Täglich um 08:00 Uhr
  */
 function initCronJobs() {
   console.log('⏰ Cron Jobs werden initialisiert...');
 
-  // Täglich um 8:00 Uhr prüfen
-  cron.schedule('0 8 * * *', async () => {
+  // Cron-Schedule aus Umgebungsvariable oder Default (täglich 8:00 Uhr)
+  const cronSchedule = process.env.CRON_SCHEDULE || '0 8 * * *';
+  
+  cron.schedule(cronSchedule, async () => {
     console.log('⏰ Cron: Tägliche Stufenaufstieg-Prüfung gestartet');
     await checkStufenaufstiege();
   });
+  
+  console.log(`⏰ Cron Jobs aktiv: Schedule "${cronSchedule}"`);
 
   // Optional: Auch bei Serverstart prüfen (verzögert)
   setTimeout(async () => {
@@ -114,8 +121,6 @@ function initCronJobs() {
       await checkStufenaufstiege();
     }
   }, 5000);
-
-  console.log('⏰ Cron Jobs aktiv: Tägliche Prüfung um 08:00 Uhr');
 }
 
 module.exports = {

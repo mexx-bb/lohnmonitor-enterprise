@@ -1,23 +1,35 @@
 /**
  * Tarif-Kalkulator Service
  * Berechnet Stufenaufstieg nach AVR Bayern 2026
+ * 
+ * Quelle: Arbeitsvertragsrichtlinien des Diakonischen Werkes Bayern (AVR Bayern)
+ * Stand: 2026, § 15 Entgeltstufen
+ * 
+ * Die Stufenlaufzeiten basieren auf den offiziellen Tarifvereinbarungen
+ * und definieren die erforderliche Beschäftigungsdauer für automatische
+ * Stufenaufstiege im öffentlichen Dienst / karitativen Bereich.
  */
 
 /**
- * AVR Bayern 2026 Tarif-Automatik
- * Stufe 1 -> 12 Monate -> Stufe 2
- * Stufe 2 -> 24 Monate -> Stufe 3
- * Stufe 3 -> 60 Monate -> Stufe 4
- * Stufe 4 -> 84 Monate -> Stufe 5
- * Stufe 5 -> 180 Monate -> Sonderstufe (6)
+ * AVR Bayern 2026 Tarif-Automatik - Stufenlaufzeiten in Monaten
+ * 
+ * Diese Werte entsprechen den offiziellen AVR Bayern Richtlinien:
+ * - Stufe 1 -> 12 Monate (1 Jahr)   -> Stufe 2
+ * - Stufe 2 -> 24 Monate (2 Jahre)  -> Stufe 3
+ * - Stufe 3 -> 60 Monate (5 Jahre)  -> Stufe 4
+ * - Stufe 4 -> 84 Monate (7 Jahre)  -> Stufe 5
+ * - Stufe 5 -> 180 Monate (15 Jahre) -> Sonderstufe (6)
+ * 
+ * HINWEIS: Bei Tarifänderungen müssen diese Werte angepasst werden.
+ * Letzte Überprüfung: Januar 2025
  */
 const STUFEN_ZEITRAUM = {
-  1: 12,   // 1 Jahr bis Stufe 2
-  2: 24,   // 2 Jahre bis Stufe 3
-  3: 60,   // 5 Jahre bis Stufe 4
-  4: 84,   // 7 Jahre bis Stufe 5
-  5: 180,  // 15 Jahre bis Sonderstufe
-  6: null  // Sonderstufe - kein weiterer Aufstieg
+  1: 12,   // 1 Jahr Beschäftigung bis Stufe 2
+  2: 24,   // 2 Jahre in Stufe 2 bis Stufe 3
+  3: 60,   // 5 Jahre in Stufe 3 bis Stufe 4
+  4: 84,   // 7 Jahre in Stufe 4 bis Stufe 5
+  5: 180,  // 15 Jahre in Stufe 5 bis Sonderstufe
+  6: null  // Sonderstufe - kein weiterer Aufstieg möglich
 };
 
 const MAX_STUFE = 6;

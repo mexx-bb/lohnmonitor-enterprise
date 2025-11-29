@@ -7,11 +7,19 @@
 const DEFAULT_BASIS_WOCHENSTUNDEN = 40;
 
 /**
+ * Durchschnittliche Wochen pro Monat
+ * Berechnung: 52.14 Wochen pro Jahr / 12 Monate = 4.345
+ * Der Wert 4.348 ist ein branchenüblicher Rundungswert für die Gehaltsabrechnung
+ * (entspricht 365.25 Tage / 7 Tage / 12 Monate = 4.348)
+ */
+const WOCHEN_PRO_MONAT = 4.348;
+
+/**
  * Berechnet Monatsstunden aus Wochenstunden
- * Formel: Wochenstunden * 4.348 (durchschnittliche Wochen pro Monat)
+ * Formel: Wochenstunden * durchschnittliche Wochen pro Monat
  */
 function berechneMonatsstunden(wochenstunden) {
-  return wochenstunden * 4.348;
+  return wochenstunden * WOCHEN_PRO_MONAT;
 }
 
 /**

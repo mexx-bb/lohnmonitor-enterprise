@@ -27,6 +27,7 @@ export default function EmployeeEditor() {
   const [formError, setFormError] = useState('')
   const [successMessage, setSuccessMessage] = useState('')
   const [showInactive, setShowInactive] = useState(false)
+  const [alarmThreshold, setAlarmThreshold] = useState(40)
 
   const [formData, setFormData] = useState({
     personalnummer: '',
@@ -48,7 +49,19 @@ export default function EmployeeEditor() {
 
   useEffect(() => {
     loadEmployees()
+    loadAlarmThreshold()
   }, [showInactive])
+
+  const loadAlarmThreshold = async () => {
+    try {
+      const data = await get('/api/dashboard/summary')
+      if (data.summary?.schwellenwertTage) {
+        setAlarmThreshold(data.summary.schwellenwertTage)
+      }
+    } catch (err) {
+      // Use default threshold if summary fails
+    }
+  }
 
   const loadEmployees = async () => {
     try {
@@ -473,6 +486,7 @@ export default function EmployeeEditor() {
         onGeneratePdf={handleGeneratePdf}
         isEditor={isEditor}
         isAdmin={isAdmin}
+        alarmThreshold={alarmThreshold}
       />
     </div>
   )

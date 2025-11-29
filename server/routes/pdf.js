@@ -13,6 +13,27 @@ const { berechneGehalt, formatWaehrung } = require('../services/salaryCalculator
 const router = express.Router();
 const prisma = new PrismaClient();
 
+/**
+ * Sanitizes a filename by removing or replacing potentially dangerous characters
+ * Prevents directory traversal and handles special characters including German umlauts
+ */
+function sanitizeFilename(filename) {
+  if (!filename) return 'unbekannt';
+  
+  return filename
+    .replace(/[/\\?%*:|"<>]/g, '') // Remove filesystem-dangerous chars
+    .replace(/\.\./g, '') // Prevent directory traversal
+    .replace(/\s+/g, '_') // Replace whitespace with underscore
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/Ä/g, 'Ae')
+    .replace(/Ö/g, 'Oe')
+    .replace(/Ü/g, 'Ue')
+    .replace(/ß/g, 'ss')
+    .substring(0, 100); // Limit length
+}
+
 // PDF Fonts definieren
 const fonts = {
   Roboto: {
@@ -30,12 +51,21 @@ router.use(requireAuth);
 /**
  * GET /api/pdf/stufenaufstieg/:employeeId
  * Generiert PDF-Brief für Stufenaufstieg
+ * 
+ * SECURITY NOTE: The employeeId in the URL is an internal database ID, not sensitive data.
+ * The route is protected by authentication (requireAuth) and role authorization (ADMIN/EDITOR).
+ * GET method is appropriate for document downloads per REST conventions.
  */
 router.get('/stufenaufstieg/:employeeId', 
   requireRole([ROLES.ADMIN, ROLES.EDITOR]), 
   async (req, res) => {
     try {
       const employeeId = parseInt(req.params.employeeId);
+      
+      // Validate employeeId is a positive integer
+      if (isNaN(employeeId) || employeeId <= 0) {
+        return res.status(400).json({ error: 'Ungültige Mitarbeiter-ID' });
+      }
       
       // Mitarbeiter laden
       const employee = await prisma.employee.findUnique({
@@ -253,11 +283,12 @@ router.get('/stufenaufstieg/:employeeId',
       // PDF generieren
       const pdfDoc = printer.createPdfKitDocument(docDefinition);
       
-      // Response Headers
+      // Response Headers with sanitized filename
+      const safeName = sanitizeFilename(employee.name);
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader(
         'Content-Disposition', 
-        `attachment; filename="Stufenaufstieg_${employee.personalnummer}_${employee.name.replace(/\s+/g, '_')}.pdf"`
+        `attachment; filename="Stufenaufstieg_${employee.personalnummer}_${safeName}.pdf"`
       );
 
       // PDF streamen
@@ -288,12 +319,20 @@ router.get('/stufenaufstieg/:employeeId',
 /**
  * GET /api/pdf/gehaltsnachweis/:employeeId
  * Generiert PDF mit Gehaltsnachweis
+ * 
+ * SECURITY NOTE: Protected by authentication and role authorization.
+ * employeeId is an internal ID, not sensitive data.
  */
 router.get('/gehaltsnachweis/:employeeId', 
   requireRole([ROLES.ADMIN, ROLES.EDITOR]), 
   async (req, res) => {
     try {
       const employeeId = parseInt(req.params.employeeId);
+      
+      // Validate employeeId
+      if (isNaN(employeeId) || employeeId <= 0) {
+        return res.status(400).json({ error: 'Ungültige Mitarbeiter-ID' });
+      }
       
       const employee = await prisma.employee.findUnique({
         where: { id: employeeId }

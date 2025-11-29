@@ -1,6 +1,13 @@
 /**
  * Lohnmonitor Enterprise - Backend Server
  * Express.js API für Pflegedienst Lohnverwaltung
+ * 
+ * SECURITY NOTE: This application is designed for internal/intranet use only.
+ * For internet-facing deployments, additional security measures like CSRF tokens
+ * should be implemented. The current session-based auth uses:
+ * - HttpOnly cookies (prevents XSS access to session)
+ * - SameSite cookie attribute (provides CSRF protection in modern browsers)
+ * - CORS restrictions (limits cross-origin requests)
  */
 
 require('dotenv').config();
@@ -8,6 +15,7 @@ require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
 const cors = require('cors');
+const crypto = require('crypto');
 const path = require('path');
 
 // Import routes
@@ -31,7 +39,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session-Konfiguration
+// Session-Konfiguration with SameSite for CSRF protection
 app.use(session({
   secret: process.env.SESSION_SECRET || 'lohnmonitor-default-secret',
   resave: false,
@@ -39,6 +47,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: 'lax', // Provides basic CSRF protection
     maxAge: 24 * 60 * 60 * 1000 // 24 Stunden
   }
 }));

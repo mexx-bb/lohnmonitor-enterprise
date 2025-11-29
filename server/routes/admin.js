@@ -18,6 +18,24 @@ const { testConnection } = require('../services/emailService');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+/**
+ * Excel Epoch Offset (in days)
+ * Excel uses January 1, 1900 as day 1, while JavaScript uses January 1, 1970.
+ * The difference is 25569 days (including the Excel leap year bug for 1900).
+ * Used to convert Excel serial date numbers to JavaScript Date objects.
+ */
+const EXCEL_EPOCH_OFFSET = 25569;
+const MS_PER_DAY = 86400 * 1000;
+
+/**
+ * Converts an Excel serial date number to a JavaScript Date
+ * @param {number} excelDate - Excel serial date number
+ * @returns {Date} JavaScript Date object
+ */
+function excelDateToJSDate(excelDate) {
+  return new Date((excelDate - EXCEL_EPOCH_OFFSET) * MS_PER_DAY);
+}
+
 router.use(requireAuth);
 
 // =====================
@@ -455,8 +473,8 @@ router.post('/import/employees', requireRole([ROLES.ADMIN, ROLES.EDITOR]), async
         let parsedEintrittsdatum;
         if (eintrittsdatum) {
           if (typeof eintrittsdatum === 'number') {
-            // Excel-Seriennummer
-            parsedEintrittsdatum = new Date((eintrittsdatum - 25569) * 86400 * 1000);
+            // Excel serial date number - convert to JavaScript Date
+            parsedEintrittsdatum = excelDateToJSDate(eintrittsdatum);
           } else {
             parsedEintrittsdatum = new Date(eintrittsdatum);
           }

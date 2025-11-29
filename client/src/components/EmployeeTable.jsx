@@ -18,7 +18,8 @@ export default function EmployeeTable({
   onDelete, 
   onGeneratePdf,
   isEditor,
-  isAdmin 
+  isAdmin,
+  alarmThreshold = 40 // Default threshold, can be passed from parent
 }) {
   const [sortField, setSortField] = useState('personalnummer')
   const [sortDirection, setSortDirection] = useState('asc')
@@ -99,10 +100,11 @@ export default function EmployeeTable({
     if (diffDays < 0) {
       return <span className="badge badge-red flex items-center gap-1"><AlertTriangle size={12} />Überfällig</span>
     }
-    if (diffDays <= 40) {
+    // Use configurable threshold from backend settings
+    if (diffDays <= alarmThreshold) {
       return <span className="badge badge-red flex items-center gap-1"><AlertTriangle size={12} />{diffDays}T</span>
     }
-    if (diffDays <= 80) {
+    if (diffDays <= alarmThreshold * 2) {
       return <span className="badge badge-yellow">{diffDays}T</span>
     }
     return <span className="badge badge-green">{diffDays}T</span>
