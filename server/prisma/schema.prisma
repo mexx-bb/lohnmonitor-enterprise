@@ -1,0 +1,93 @@
+// Lohnmonitor Enterprise - Prisma Schema
+// SQLite Datenbank für lokale Windows-Server Nutzung
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Benutzer für Authentifizierung
+model User {
+  id               Int      @id @default(autoincrement())
+  username         String   @unique
+  passwordHash     String   @map("password_hash")
+  role             String   @default("Viewer") // Admin, Editor, Viewer
+  departmentAccess String?  @map("department_access") // Komma-getrennte Abteilungen
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+// Mitarbeiter-Stammdaten
+model Employee {
+  id               Int       @id @default(autoincrement())
+  personalnummer   String    @unique
+  name             String
+  qualifikation    String?
+  abteilung        String?
+  eintrittsdatum   DateTime  @map("eintritts_datum")
+  entgeltgruppe    String    @map("entgelt_gruppe") // E1-E14
+  stufe            Int       @default(1) // 1-6
+  naechsterAufstieg DateTime? @map("naechster_aufstieg")
+  wochenstunden    Float     @map("wochen_stunden")
+  stundenlohn      Float     @map("stunden_lohn")
+  aktiv            Boolean   @default(true)
+  zulagen          String?   @default("{}") // JSON: {gruppe, schicht, tl100, tl150}
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  notifications Notification[]
+
+  @@map("employees")
+}
+
+// Einstellungen Key-Value Store
+model Setting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// Audit-Log für alle Änderungen
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  userId    Int?     @map("user_id")
+  action    String
+  details   String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// Benachrichtigungen für Stufenaufstieg
+model Notification {
+  id           Int       @id @default(autoincrement())
+  employeeId   Int       @map("employee_id")
+  type         String    // "stufenaufstieg", "email_sent"
+  message      String
+  sent         Boolean   @default(false)
+  sentAt       DateTime? @map("sent_at")
+  acknowledged Boolean   @default(false)
+  acknowledgedAt DateTime? @map("acknowledged_at")
+  acknowledgedBy String?  @map("acknowledged_by")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
