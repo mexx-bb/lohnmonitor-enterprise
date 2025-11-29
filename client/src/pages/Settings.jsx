@@ -247,13 +247,30 @@ export default function Settings() {
 
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label className="label">Firmenname</label>
+              <label className="label">Firmenname (Anzeigename)</label>
+              <input
+                type="text"
+                value={settings.company_name || ''}
+                onChange={(e) => setSettings({...settings, company_name: e.target.value})}
+                className="input"
+                placeholder="Lohnmonitor"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Wird in der Navigation, im Dashboard und in PDFs angezeigt
+              </p>
+            </div>
+
+            <div>
+              <label className="label">Firmenname (PDF)</label>
               <input
                 type="text"
                 value={settings.firma_name || ''}
                 onChange={(e) => setSettings({...settings, firma_name: e.target.value})}
                 className="input"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Für Briefkopf in PDF-Dokumenten
+              </p>
             </div>
 
             <div>

@@ -84,10 +84,14 @@ router.get('/stufenaufstieg/:employeeId',
         ? parseFloat(basisWochenstundenSetting.value) 
         : 40;
 
-      // Firmenname aus Settings
+      // Firmenname aus Settings (company_name für Anzeige, firma_name als Fallback)
+      const companyName = await prisma.setting.findUnique({
+        where: { key: 'company_name' }
+      });
       const firmaName = await prisma.setting.findUnique({
         where: { key: 'firma_name' }
       });
+      const displayCompanyName = companyName?.value || firmaName?.value || 'Lohnmonitor';
 
       // Gehalt berechnen
       const gehalt = berechneGehalt(employee, basisWochenstunden);
@@ -118,7 +122,7 @@ router.get('/stufenaufstieg/:employeeId',
           {
             columns: [
               {
-                text: firmaName?.value || 'Pflegedienst GmbH',
+                text: displayCompanyName,
                 style: 'header'
               },
               {

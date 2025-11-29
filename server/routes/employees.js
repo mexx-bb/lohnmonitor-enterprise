@@ -333,7 +333,12 @@ router.delete('/:id', requireRole(ROLES.ADMIN), [
     }
 
     if (hardDelete === 'true') {
-      // Hartes Löschen (nur für spezielle Fälle)
+      // Hartes Löschen - erst verknüpfte Notifications löschen
+      const deletedNotifications = await prisma.notification.deleteMany({
+        where: { employeeId: id }
+      });
+
+      // Dann Mitarbeiter löschen
       await prisma.employee.delete({
         where: { id }
       });
@@ -341,11 +346,12 @@ router.delete('/:id', requireRole(ROLES.ADMIN), [
       await prisma.auditLog.create({
         data: {
           userId: req.user.id,
-          action: 'EMPLOYEE_DELETED',
+          action: 'DELETE_EMPLOYEE',
           details: JSON.stringify({ 
             id,
             personalnummer: existing.personalnummer,
             name: existing.name,
+            deletedNotifications: deletedNotifications.count,
             deletedBy: req.user.username 
           })
         }

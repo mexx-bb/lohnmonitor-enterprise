@@ -22,6 +22,7 @@ export default function Dashboard() {
   const [alarms, setAlarms] = useState([])
   const [showCalculator, setShowCalculator] = useState(false)
   const [basisWochenstunden, setBasisWochenstunden] = useState(40)
+  const [companyName, setCompanyName] = useState('Lohnmonitor')
 
   useEffect(() => {
     loadData()
@@ -29,13 +30,18 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const [summaryData, alarmsData] = await Promise.all([
+      const [summaryData, alarmsData, publicSettings] = await Promise.all([
         get('/api/dashboard/summary'),
-        get('/api/dashboard/alarms')
+        get('/api/dashboard/alarms'),
+        get('/api/admin/settings/public')
       ])
 
       setSummary(summaryData.summary)
       setAlarms(alarmsData.alarms)
+      
+      if (publicSettings.company_name) {
+        setCompanyName(publicSettings.company_name)
+      }
 
       // Get basis wochenstunden from settings if admin
       if (isAdmin) {
@@ -87,7 +93,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{companyName} - Dashboard</h1>
           <p className="text-gray-600">Übersicht und Stufenaufstieg-Alarme</p>
         </div>
         <div className="flex gap-2">

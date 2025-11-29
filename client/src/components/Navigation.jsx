@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useApi } from '../hooks/useApi'
 import { 
   LayoutDashboard, 
   Users, 
@@ -10,13 +11,31 @@ import {
   X,
   User
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function Navigation() {
   const { user, logout, isAdmin } = useAuth()
+  const { get } = useApi()
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [companyName, setCompanyName] = useState('Lohnmonitor')
+
+  useEffect(() => {
+    loadCompanyName()
+  }, [])
+
+  const loadCompanyName = async () => {
+    try {
+      const data = await get('/api/admin/settings/public')
+      if (data.company_name) {
+        setCompanyName(data.company_name)
+      }
+    } catch (err) {
+      // Use default if loading fails
+      console.error('Failed to load company name:', err)
+    }
+  }
 
   const handleLogout = async () => {
     await logout()
@@ -39,9 +58,9 @@ export default function Navigation() {
           <div className="flex items-center">
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-                <span className="text-primary-700 font-bold text-lg">L</span>
+                <span className="text-primary-700 font-bold text-lg">{companyName.charAt(0).toUpperCase()}</span>
               </div>
-              <span className="font-bold text-xl hidden sm:block">Lohnmonitor</span>
+              <span className="font-bold text-xl hidden sm:block">{companyName}</span>
             </Link>
           </div>
 

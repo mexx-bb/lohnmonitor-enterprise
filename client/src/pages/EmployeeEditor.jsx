@@ -3,6 +3,7 @@ import { useApi, formatDate } from '../hooks/useApi'
 import { useAuth } from '../hooks/useAuth'
 import EmployeeTable from '../components/EmployeeTable'
 import ExcelImport from '../components/ExcelImport'
+import ConfirmDialog from '../components/ConfirmDialog'
 import { 
   Users, 
   Plus, 
@@ -28,6 +29,10 @@ export default function EmployeeEditor() {
   const [successMessage, setSuccessMessage] = useState('')
   const [showInactive, setShowInactive] = useState(false)
   const [alarmThreshold, setAlarmThreshold] = useState(40)
+  
+  // Delete confirmation dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [employeeToDelete, setEmployeeToDelete] = useState(null)
 
   const [formData, setFormData] = useState({
     personalnummer: '',
@@ -122,16 +127,24 @@ export default function EmployeeEditor() {
     setFormError('')
   }
 
-  const handleDelete = async (employee) => {
-    if (!confirm(`Mitarbeiter "${employee.name}" wirklich deaktivieren?`)) return
+  const handleDelete = (employee) => {
+    setEmployeeToDelete(employee)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDelete = async () => {
+    if (!employeeToDelete) return
 
     try {
-      await del(`/api/employees/${employee.id}`)
-      setSuccessMessage('Mitarbeiter deaktiviert')
+      // Hard delete with cascade
+      await del(`/api/employees/${employeeToDelete.id}?hardDelete=true`)
+      setSuccessMessage('Mitarbeiter endgültig gelöscht')
       setTimeout(() => setSuccessMessage(''), 3000)
       loadEmployees()
     } catch (err) {
       setFormError(err.message)
+    } finally {
+      setEmployeeToDelete(null)
     }
   }
 
@@ -487,6 +500,32 @@ export default function EmployeeEditor() {
         isEditor={isEditor}
         isAdmin={isAdmin}
         alarmThreshold={alarmThreshold}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialogOpen}
+        onClose={() => {
+          setDeleteDialogOpen(false)
+          setEmployeeToDelete(null)
+        }}
+        onConfirm={confirmDelete}
+        title="Mitarbeiter endgültig löschen?"
+        message={
+          <div>
+            <p className="mb-2">
+              <strong>{employeeToDelete?.name}</strong> (PN: {employeeToDelete?.personalnummer})
+            </p>
+            <p className="text-red-600 font-medium">
+              Diese Aktion kann nicht rückgängig gemacht werden!
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+              Alle zugehörigen Benachrichtigungen werden ebenfalls gelöscht.
+            </p>
+          </div>
+        }
+        confirmText="Endgültig löschen"
+        variant="danger"
       />
     </div>
   )

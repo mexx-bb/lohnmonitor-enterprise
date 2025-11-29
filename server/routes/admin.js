@@ -242,6 +242,26 @@ router.delete('/users/:id', requireAdmin, async (req, res) => {
 // =====================
 
 /**
+ * GET /api/admin/settings/public
+ * Öffentliche Einstellungen (für alle authentifizierten Benutzer)
+ * Gibt nur company_name zurück
+ */
+router.get('/settings/public', async (req, res) => {
+  try {
+    const companySetting = await prisma.setting.findUnique({
+      where: { key: 'company_name' }
+    });
+
+    res.json({ 
+      company_name: companySetting?.value || 'Lohnmonitor'
+    });
+  } catch (error) {
+    console.error('Fehler bei GET /settings/public:', error);
+    res.status(500).json({ error: 'Serverfehler' });
+  }
+});
+
+/**
  * GET /api/admin/settings
  * Alle Einstellungen (nur Admin)
  */
