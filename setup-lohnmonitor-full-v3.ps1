@@ -50,7 +50,7 @@ $ColorInfo = "Cyan"
 $ColorHeader = "Magenta"
 
 # Node.js Download URL
-$NodeJsUrl = "https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi"
+$NodeJsUrl = "https://nodejs.org/dist/v22.11.0/node-v22.11.0-x64.msi"
 
 # ============================================================================
 # HILFSFUNKTIONEN
@@ -187,11 +187,14 @@ function Install-Dependencies {
             Push-Location $ServerDir
             
             $npmOutput = & npm install 2>&1
-            if ($LASTEXITCODE -ne 0) {
-                Write-Warn "npm install hatte Warnungen/Fehler: $npmOutput"
-            }
-            
+            $npmExitCode = $LASTEXITCODE
             Pop-Location
+            
+            if ($npmExitCode -ne 0) {
+                Write-Err "npm install für Server fehlgeschlagen (Exit Code: $npmExitCode)"
+                Write-Host $npmOutput -ForegroundColor Gray
+                return $false
+            }
             Write-Success "Server-Dependencies installiert"
         }
         else {
@@ -204,11 +207,14 @@ function Install-Dependencies {
             Push-Location $ClientDir
             
             $npmOutput = & npm install 2>&1
-            if ($LASTEXITCODE -ne 0) {
-                Write-Warn "npm install hatte Warnungen/Fehler: $npmOutput"
-            }
-            
+            $npmExitCode = $LASTEXITCODE
             Pop-Location
+            
+            if ($npmExitCode -ne 0) {
+                Write-Err "npm install für Client fehlgeschlagen (Exit Code: $npmExitCode)"
+                Write-Host $npmOutput -ForegroundColor Gray
+                return $false
+            }
             Write-Success "Client-Dependencies installiert"
         }
         else {
@@ -249,20 +255,25 @@ function Initialize-Database {
         Write-Info "Generiere Prisma Client..."
         $prismaGenerate = & npx prisma generate 2>&1
         if ($LASTEXITCODE -ne 0) {
-            Write-Warn "Prisma generate: $prismaGenerate"
+            Pop-Location
+            Write-Err "Prisma generate fehlgeschlagen"
+            Write-Host $prismaGenerate -ForegroundColor Gray
+            return $false
         }
         
         Write-Info "Führe Datenbank-Migrationen aus..."
         $prismaDb = & npx prisma db push 2>&1
         if ($LASTEXITCODE -ne 0) {
-            Write-Warn "Prisma db push: $prismaDb"
+            Pop-Location
+            Write-Err "Prisma db push fehlgeschlagen"
+            Write-Host $prismaDb -ForegroundColor Gray
+            return $false
         }
         
         Write-Info "Seed Datenbank..."
-        try {
-            $prismaSeed = & npx prisma db seed 2>&1
-        }
-        catch {
+        # Seed is optional and may fail if already seeded
+        $prismaSeed = & npx prisma db seed 2>&1
+        if ($LASTEXITCODE -ne 0) {
             Write-Info "Seed übersprungen (bereits vorhanden oder nicht konfiguriert)"
         }
         
