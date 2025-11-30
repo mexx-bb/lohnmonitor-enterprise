@@ -1,6 +1,33 @@
 # 📖 Lohnmonitor Enterprise - Installationsleitfaden
 
-## ⚡ Schnell-Installation (5 Minuten)
+## ⚡ Schnell-Installation mit PowerShell (Empfohlen)
+
+### One-Click Installation mit PowerShell
+
+**Option 1: PowerShell-Skript direkt ausführen**
+```powershell
+# PowerShell als Administrator öffnen
+# Rechtsklick auf Download-Lohnmonitor.ps1 → "Mit PowerShell ausführen"
+.\Download-Lohnmonitor.ps1
+```
+
+**Option 2: One-Liner aus dem Internet (Schnellste Methode)**
+```powershell
+# PowerShell als Administrator öffnen und diesen Befehl ausführen:
+irm https://raw.githubusercontent.com/mexx-bb/lohnmonitor-enterprise/main/Download-Lohnmonitor.ps1 | iex
+```
+
+Das PowerShell-Skript führt automatisch alle Schritte durch:
+- ✅ Repository von GitHub herunterladen
+- ✅ Node.js installieren (falls nötig)
+- ✅ npm-Dependencies installieren
+- ✅ Datenbank initialisieren
+- ✅ Firewall konfigurieren
+- ✅ Desktop-Verknüpfungen erstellen
+
+---
+
+## 📦 Alternative: Batch-Installation
 
 ### Schritt 1: Setup-Skript ausführen
 ```

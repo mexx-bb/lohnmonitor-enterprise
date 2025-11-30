@@ -62,14 +62,23 @@ Lokale Web-Anwendung für Windows-Server (Intranet), ohne externe Abhängigkeite
 
 ## 🚀 Schnellstart
 
-### 1. Installation
+### 1. Installation (PowerShell - Empfohlen)
+```powershell
+# PowerShell als Administrator öffnen und ausführen:
+.\Download-Lohnmonitor.ps1
+
+# ODER: One-Liner direkt aus dem Internet:
+irm https://raw.githubusercontent.com/mexx-bb/lohnmonitor-enterprise/main/Download-Lohnmonitor.ps1 | iex
+```
+
+### Alternative: Batch-Installation
 ```bash
-# Batch-Skript ausführen
+# Batch-Skript ausführen (Rechtsklick → Als Administrator ausführen)
 setup-lohnmonitor.bat
 ```
 
 ### 2. App starten
-```bash
+```powershell
 # Im Installationsverzeichnis:
 .\scripts\Start-Dev.ps1
 ```
@@ -79,7 +88,7 @@ setup-lohnmonitor.bat
 http://localhost:5173
 ```
 
-### 4.  Anmelden
+### 4. Anmelden
 ```
 Benutzer: admin
 Passwort: password
@@ -89,7 +98,7 @@ Passwort: password
 
 ## 📖 Dokumentation
 
-- **[INSTALL. md](./INSTALL.md)** - Detaillierte Installationsanleitung
+- **[INSTALL.md](./INSTALL.md)** - Detaillierte Installationsanleitung
 - **[API-DOKUMENTATION.md](./docs/API-DOKUMENTATION.md)** - Backend-API
 - **[TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** - Fehlerbehebung
 
@@ -119,9 +128,11 @@ Passwort: password
 
 | Skript | Funktion |
 |--------|---------|
-| `setup-lohnmonitor.bat` | Vollständige Installation |
+| `Download-Lohnmonitor.ps1` | One-Click Download & Installation (PowerShell) |
+| `setup-lohnmonitor-full-v3.ps1` | Vollständige lokale Installation (PowerShell) |
+| `setup-lohnmonitor.bat` | Vollständige Installation (Batch) |
 | `update-lohnmonitor.bat` | Aktualisierung einspielen |
-| `uninstall-lohnmonitor. bat` | Komplett deinstallieren |
+| `uninstall-lohnmonitor.bat` | Komplett deinstallieren |
 | `create-shortcuts.bat` | Desktop-Shortcuts erstellen |
 | `Start-Dev.ps1` | Backend + Frontend starten |
 | `Backup-Lohnmonitor.ps1` | Datenbank sichern |
