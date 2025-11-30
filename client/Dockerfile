@@ -12,7 +12,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci || npm install
 
 # Copy application code
 COPY . .
@@ -24,6 +24,9 @@ RUN npm run build
 # Stage 2: Production Stage (Nginx)
 # ============================
 FROM nginx:alpine
+
+# Install wget for health checks
+RUN apk add --no-cache wget
 
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf

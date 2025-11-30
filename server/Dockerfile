@@ -5,13 +5,16 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# Install wget for health checks
+RUN apk add --no-cache wget
+
 # Create non-root user for security
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S lohnmonitor -u 1001 -G nodejs
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm install
+RUN npm ci --only=production || npm install --omit=dev
 
 # Copy Prisma schema and generate client
 COPY prisma ./prisma/
@@ -22,6 +25,10 @@ COPY index.js ./
 COPY routes ./routes/
 COPY services ./services/
 COPY middleware ./middleware/
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # Create data directory for SQLite database
 RUN mkdir -p /app/data && chown -R lohnmonitor:nodejs /app/data
@@ -45,4 +52,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:5000/api/health || exit 1
 
 # Start the application
-CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node index.js"]
+ENTRYPOINT ["/docker-entrypoint.sh"]
