@@ -62,7 +62,22 @@ Lokale Web-Anwendung für Windows-Server (Intranet), ohne externe Abhängigkeite
 
 ## 🚀 Schnellstart
 
-### 1. Installation (PowerShell - Empfohlen)
+### Option 1: Docker (Empfohlen für plattformunabhängige Installation)
+
+```bash
+# Repository klonen
+git clone https://github.com/mexx-bb/lohnmonitor-enterprise.git
+cd lohnmonitor-enterprise
+
+# Container starten
+docker compose up -d
+
+# Öffnen: http://localhost:8080
+```
+
+📚 Ausführliche Docker-Anleitung: **[DOCKER.md](./DOCKER.md)**
+
+### Option 2: Windows-Installation (PowerShell)
 ```powershell
 # PowerShell als Administrator öffnen und ausführen:
 .\Download-Lohnmonitor.ps1
@@ -77,7 +92,7 @@ irm https://raw.githubusercontent.com/mexx-bb/lohnmonitor-enterprise/main/Downlo
 setup-lohnmonitor.bat
 ```
 
-### 2. App starten
+### 2. App starten (Windows-Installation)
 ```powershell
 # Im Installationsverzeichnis:
 .\scripts\Start-Dev.ps1
@@ -85,7 +100,8 @@ setup-lohnmonitor.bat
 
 ### 3. Im Browser öffnen
 ```
-http://localhost:5173
+Docker:   http://localhost:8080
+Windows:  http://localhost:5173
 ```
 
 ### 4. Anmelden
@@ -98,6 +114,7 @@ Passwort: password
 
 ## 📖 Dokumentation
 
+- **[DOCKER.md](./DOCKER.md)** - Docker-Anleitung & Container-Deployment
 - **[INSTALL.md](./INSTALL.md)** - Detaillierte Installationsanleitung
 - **[API-DOKUMENTATION.md](./docs/API-DOKUMENTATION.md)** - Backend-API
 - **[TROUBLESHOOTING.md](./docs/TROUBLESHOOTING.md)** - Fehlerbehebung
