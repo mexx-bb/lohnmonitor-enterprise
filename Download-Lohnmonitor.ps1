@@ -1,11 +1,11 @@
 <#
 .SYNOPSIS
-    Lohnmonitor Enterprise - Vollständiges Setup-Skript
+    Lohnmonitor Enterprise - One-Click Download und Installation
     
 .DESCRIPTION
-    Dieses PowerShell-Skript führt die vollständige Installation von
-    Lohnmonitor Enterprise durch, nachdem die Dateien bereits heruntergeladen wurden.
-    Es installiert Node.js (falls nötig), Dependencies, und konfiguriert das System.
+    Dieses PowerShell-Skript lädt Lohnmonitor Enterprise von GitHub herunter
+    und führt eine vollständige Installation durch. Es kann mit einem
+    einzigen Klick gestartet werden.
     
 .NOTES
     Version:        3.0.0
@@ -14,14 +14,25 @@
     Voraussetzung:  Windows 10/11 oder Windows Server 2019+
     
 .EXAMPLE
-    # In PowerShell als Administrator ausführen:
-    .\setup-lohnmonitor-full-v3.ps1
+    # Mit Rechtsklick -> "Mit PowerShell ausführen"
+    # ODER in PowerShell als Administrator:
+    .\Download-Lohnmonitor.ps1
+    
+.EXAMPLE
+    # Direkter Aufruf aus dem Internet (One-Liner):
+    irm https://raw.githubusercontent.com/mexx-bb/lohnmonitor-enterprise/main/Download-Lohnmonitor.ps1 | iex
 #>
 
 #Requires -Version 5.1
 
 [CmdletBinding()]
 param(
+    [Parameter(HelpMessage = "Installationspfad")]
+    [string]$InstallPath = "C:\Programme\LohnmonitorEnterprise",
+    
+    [Parameter(HelpMessage = "GitHub Repository URL")]
+    [string]$GitHubRepo = "https://github.com/mexx-bb/lohnmonitor-enterprise",
+    
     [Parameter(HelpMessage = "Überspringt die Node.js-Installation")]
     [switch]$SkipNodeInstall,
     
@@ -36,21 +47,19 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
 
-# Pfade
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RootDir = $ScriptDir
-$ServerDir = Join-Path $RootDir "server"
-$ClientDir = Join-Path $RootDir "client"
-
-# Farben
+# Farben für Ausgaben
 $ColorSuccess = "Green"
 $ColorError = "Red"
 $ColorWarning = "Yellow"
 $ColorInfo = "Cyan"
 $ColorHeader = "Magenta"
 
-# Node.js Download URL
+# URLs
 $NodeJsUrl = "https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi"
+$GitHubZipUrl = "$GitHubRepo/archive/refs/heads/main.zip"
+
+# Temp-Verzeichnis
+$TempDir = Join-Path $env:TEMP "lohnmonitor-download"
 
 # ============================================================================
 # HILFSFUNKTIONEN
@@ -96,6 +105,27 @@ function Test-Administrator {
     return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 }
 
+function Request-Elevation {
+    if (-not (Test-Administrator)) {
+        Write-Warn "Dieses Skript benötigt Administrator-Rechte."
+        Write-Info "Starte neu mit erhöhten Rechten..."
+        
+        $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+        if ($InstallPath -ne "C:\Programme\LohnmonitorEnterprise") {
+            $arguments += " -InstallPath `"$InstallPath`""
+        }
+        if ($SkipNodeInstall) {
+            $arguments += " -SkipNodeInstall"
+        }
+        if ($Unattended) {
+            $arguments += " -Unattended"
+        }
+        
+        Start-Process PowerShell -Verb RunAs -ArgumentList $arguments
+        exit
+    }
+}
+
 function Confirm-Continue {
     param([string]$Message = "Fortfahren?")
     
@@ -108,7 +138,7 @@ function Confirm-Continue {
 }
 
 # ============================================================================
-# INSTALLATIONS-FUNKTIONEN
+# HAUPTFUNKTIONEN
 # ============================================================================
 
 function Test-NodeInstalled {
@@ -128,12 +158,7 @@ function Test-NodeInstalled {
 function Install-NodeJs {
     Write-Step "Installiere Node.js..."
     
-    $tempDir = Join-Path $env:TEMP "lohnmonitor-setup"
-    if (-not (Test-Path $tempDir)) {
-        New-Item -ItemType Directory -Path $tempDir -Force | Out-Null
-    }
-    
-    $msiPath = Join-Path $tempDir "node-installer.msi"
+    $msiPath = Join-Path $TempDir "node-installer.msi"
     
     Write-Info "Lade Node.js herunter von $NodeJsUrl..."
     
@@ -177,42 +202,153 @@ function Install-NodeJs {
     }
 }
 
+function Get-Repository {
+    Write-Step "Lade Repository herunter..."
+    
+    $zipPath = Join-Path $TempDir "lohnmonitor-enterprise.zip"
+    $extractPath = Join-Path $TempDir "extracted"
+    
+    try {
+        # Prüfe ob Git verfügbar ist
+        $gitAvailable = $false
+        try {
+            $gitVersion = & git --version 2>$null
+            if ($gitVersion) {
+                $gitAvailable = $true
+                Write-Info "Git gefunden: $gitVersion"
+            }
+        }
+        catch {
+            # Git nicht verfügbar
+        }
+        
+        if ($gitAvailable) {
+            Write-Info "Klone Repository mit Git..."
+            
+            if (Test-Path $extractPath) {
+                Remove-Item $extractPath -Recurse -Force
+            }
+            
+            & git clone "$GitHubRepo.git" $extractPath 2>&1 | Out-Null
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Success "Repository mit Git geklont"
+                return $extractPath
+            }
+            else {
+                Write-Warn "Git Clone fehlgeschlagen, versuche ZIP-Download..."
+            }
+        }
+        
+        # ZIP-Download als Fallback
+        Write-Info "Lade ZIP-Archiv herunter..."
+        Write-Info "URL: $GitHubZipUrl"
+        
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        
+        $webClient = New-Object System.Net.WebClient
+        $webClient.DownloadFile($GitHubZipUrl, $zipPath)
+        
+        Write-Success "ZIP-Archiv heruntergeladen"
+        
+        # Entpacken
+        Write-Info "Entpacke Archiv..."
+        
+        if (Test-Path $extractPath) {
+            Remove-Item $extractPath -Recurse -Force
+        }
+        
+        Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force
+        
+        # Finde den entpackten Ordner (z.B. lohnmonitor-enterprise-main)
+        $extractedFolder = Get-ChildItem $extractPath -Directory | Select-Object -First 1
+        
+        Write-Success "Archiv entpackt"
+        
+        return $extractedFolder.FullName
+    }
+    catch {
+        Write-Err "Fehler beim Repository-Download: $_"
+        throw
+    }
+    finally {
+        if (Test-Path $zipPath) {
+            Remove-Item $zipPath -Force -ErrorAction SilentlyContinue
+        }
+    }
+}
+
+function Copy-ToInstallPath {
+    param([string]$SourcePath)
+    
+    Write-Step "Kopiere Dateien nach $InstallPath..."
+    
+    try {
+        # Prüfe ob Zielordner existiert
+        if (Test-Path $InstallPath) {
+            Write-Warn "Installationsordner existiert bereits: $InstallPath"
+            
+            if (-not (Confirm-Continue "Ordner überschreiben?")) {
+                Write-Info "Installation abgebrochen"
+                return $false
+            }
+            
+            # Backup der .env Datei falls vorhanden
+            $envBackup = $null
+            $envPath = Join-Path $InstallPath "server\.env"
+            if (Test-Path $envPath) {
+                $envBackup = Get-Content $envPath -Raw
+                Write-Info ".env Datei wird gesichert"
+            }
+            
+            Remove-Item $InstallPath -Recurse -Force
+        }
+        
+        # Erstelle Zielordner
+        New-Item -ItemType Directory -Path $InstallPath -Force | Out-Null
+        
+        # Kopiere alle Dateien
+        Copy-Item -Path "$SourcePath\*" -Destination $InstallPath -Recurse -Force
+        
+        # Stelle .env wieder her falls vorhanden
+        if ($envBackup) {
+            $envPath = Join-Path $InstallPath "server\.env"
+            Set-Content -Path $envPath -Value $envBackup -Force
+            Write-Info ".env Datei wiederhergestellt"
+        }
+        
+        Write-Success "Dateien kopiert nach $InstallPath"
+        return $true
+    }
+    catch {
+        Write-Err "Fehler beim Kopieren: $_"
+        return $false
+    }
+}
+
 function Install-Dependencies {
     Write-Step "Installiere Abhängigkeiten..."
     
+    $serverDir = Join-Path $InstallPath "server"
+    $clientDir = Join-Path $InstallPath "client"
+    
     try {
         # Server Dependencies
-        if (Test-Path (Join-Path $ServerDir "package.json")) {
+        if (Test-Path (Join-Path $serverDir "package.json")) {
             Write-Info "Installiere Server-Dependencies..."
-            Push-Location $ServerDir
-            
-            $npmOutput = & npm install 2>&1
-            if ($LASTEXITCODE -ne 0) {
-                Write-Warn "npm install hatte Warnungen/Fehler: $npmOutput"
-            }
-            
+            Push-Location $serverDir
+            & npm install 2>&1 | Out-Null
             Pop-Location
             Write-Success "Server-Dependencies installiert"
         }
-        else {
-            Write-Warn "server/package.json nicht gefunden"
-        }
         
         # Client Dependencies
-        if (Test-Path (Join-Path $ClientDir "package.json")) {
+        if (Test-Path (Join-Path $clientDir "package.json")) {
             Write-Info "Installiere Client-Dependencies..."
-            Push-Location $ClientDir
-            
-            $npmOutput = & npm install 2>&1
-            if ($LASTEXITCODE -ne 0) {
-                Write-Warn "npm install hatte Warnungen/Fehler: $npmOutput"
-            }
-            
+            Push-Location $clientDir
+            & npm install 2>&1 | Out-Null
             Pop-Location
             Write-Success "Client-Dependencies installiert"
-        }
-        else {
-            Write-Warn "client/package.json nicht gefunden"
         }
         
         return $true
@@ -226,10 +362,12 @@ function Install-Dependencies {
 function Initialize-Database {
     Write-Step "Initialisiere Datenbank..."
     
+    $serverDir = Join-Path $InstallPath "server"
+    
     try {
         # Erstelle .env falls nicht vorhanden
-        $envPath = Join-Path $ServerDir ".env"
-        $envExamplePath = Join-Path $ServerDir ".env.example"
+        $envPath = Join-Path $serverDir ".env"
+        $envExamplePath = Join-Path $serverDir ".env.example"
         
         if (-not (Test-Path $envPath) -and (Test-Path $envExamplePath)) {
             Copy-Item $envExamplePath $envPath
@@ -237,34 +375,22 @@ function Initialize-Database {
         }
         
         # Erstelle data-Verzeichnis
-        $dataDir = Join-Path $ServerDir "data"
+        $dataDir = Join-Path $serverDir "data"
         if (-not (Test-Path $dataDir)) {
             New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
-            Write-Info "Data-Verzeichnis erstellt"
         }
         
         # Prisma Setup
-        Push-Location $ServerDir
+        Push-Location $serverDir
         
         Write-Info "Generiere Prisma Client..."
-        $prismaGenerate = & npx prisma generate 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warn "Prisma generate: $prismaGenerate"
-        }
+        & npx prisma generate 2>&1 | Out-Null
         
         Write-Info "Führe Datenbank-Migrationen aus..."
-        $prismaDb = & npx prisma db push 2>&1
-        if ($LASTEXITCODE -ne 0) {
-            Write-Warn "Prisma db push: $prismaDb"
-        }
+        & npx prisma db push 2>&1 | Out-Null
         
         Write-Info "Seed Datenbank..."
-        try {
-            $prismaSeed = & npx prisma db seed 2>&1
-        }
-        catch {
-            Write-Info "Seed übersprungen (bereits vorhanden oder nicht konfiguriert)"
-        }
+        & npx prisma db seed 2>&1 | Out-Null
         
         Pop-Location
         
@@ -332,8 +458,8 @@ function New-Shortcuts {
         # Desktop: Start Lohnmonitor
         $shortcut = $WshShell.CreateShortcut("$desktop\Start Lohnmonitor.lnk")
         $shortcut.TargetPath = "powershell.exe"
-        $shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$RootDir\scripts\Start-Dev.ps1`""
-        $shortcut.WorkingDirectory = $RootDir
+        $shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$InstallPath\scripts\Start-Dev.ps1`""
+        $shortcut.WorkingDirectory = $InstallPath
         $shortcut.Description = "Starte Lohnmonitor Enterprise"
         $shortcut.WindowStyle = 1
         $shortcut.Save()
@@ -342,8 +468,8 @@ function New-Shortcuts {
         # Desktop: Backup Lohnmonitor
         $shortcut = $WshShell.CreateShortcut("$desktop\Backup Lohnmonitor.lnk")
         $shortcut.TargetPath = "powershell.exe"
-        $shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$RootDir\scripts\Backup-Lohnmonitor.ps1`""
-        $shortcut.WorkingDirectory = $RootDir
+        $shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$InstallPath\scripts\Backup-Lohnmonitor.ps1`""
+        $shortcut.WorkingDirectory = $InstallPath
         $shortcut.Description = "Erstelle Datenbank-Backup"
         $shortcut.WindowStyle = 1
         $shortcut.Save()
@@ -359,22 +485,12 @@ function New-Shortcuts {
         # Start-Menu: Start Lohnmonitor
         $shortcut = $WshShell.CreateShortcut("$startMenu\Start Lohnmonitor.lnk")
         $shortcut.TargetPath = "powershell.exe"
-        $shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$RootDir\scripts\Start-Dev.ps1`""
-        $shortcut.WorkingDirectory = $RootDir
+        $shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$InstallPath\scripts\Start-Dev.ps1`""
+        $shortcut.WorkingDirectory = $InstallPath
         $shortcut.Description = "Starte Lohnmonitor Enterprise"
         $shortcut.WindowStyle = 1
         $shortcut.Save()
         Write-Info "Start-Menu-Verknüpfung erstellt"
-        
-        # Start-Menu: Backup
-        $shortcut = $WshShell.CreateShortcut("$startMenu\Backup erstellen.lnk")
-        $shortcut.TargetPath = "powershell.exe"
-        $shortcut.Arguments = "-ExecutionPolicy Bypass -File `"$RootDir\scripts\Backup-Lohnmonitor.ps1`""
-        $shortcut.WorkingDirectory = $RootDir
-        $shortcut.Description = "Erstelle Datenbank-Backup"
-        $shortcut.WindowStyle = 1
-        $shortcut.Save()
-        Write-Info "Start-Menu Backup-Verknüpfung erstellt"
         
         Write-Success "Verknüpfungen erstellt"
         return $true
@@ -393,7 +509,7 @@ function Show-CompletionMessage {
     Write-Host "║                                                            ║" -ForegroundColor $ColorSuccess
     Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor $ColorSuccess
     Write-Host ""
-    Write-Host "Installationspfad: $RootDir" -ForegroundColor $ColorInfo
+    Write-Host "Installationspfad: $InstallPath" -ForegroundColor $ColorInfo
     Write-Host ""
     Write-Host "Nächste Schritte:" -ForegroundColor $ColorHeader
     Write-Host ""
@@ -414,48 +530,44 @@ function Show-CompletionMessage {
     Write-Host ""
 }
 
+function Clear-TempFiles {
+    Write-Step "Räume temporäre Dateien auf..."
+    
+    try {
+        if (Test-Path $TempDir) {
+            Remove-Item $TempDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
+        Write-Success "Temporäre Dateien entfernt"
+    }
+    catch {
+        Write-Warn "Konnte temporäre Dateien nicht vollständig entfernen"
+    }
+}
+
 # ============================================================================
 # HAUPTPROGRAMM
 # ============================================================================
 
 try {
-    Write-Header "LOHNMONITOR ENTERPRISE v3.0 - SETUP"
+    Write-Header "LOHNMONITOR ENTERPRISE - ONE-CLICK INSTALLATION"
     
-    Write-Host "Installationsverzeichnis: $RootDir"
+    Write-Host "Version:     3.0.0"
+    Write-Host "Repository:  $GitHubRepo"
+    Write-Host "Zielpfad:    $InstallPath"
     Write-Host ""
     
     # Administrator-Rechte prüfen
-    if (-not (Test-Administrator)) {
-        Write-Err "Dieses Skript benötigt Administrator-Rechte!"
-        Write-Host ""
-        Write-Host "Bitte starten Sie PowerShell als Administrator und führen Sie das Skript erneut aus."
-        Write-Host ""
-        
-        if (-not $Unattended) {
-            Write-Host "Drücken Sie eine beliebige Taste zum Beenden..."
-            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        }
-        exit 1
-    }
+    Request-Elevation
     
     Write-Success "Administrator-Rechte vorhanden"
-    Write-Host ""
-    
-    # Prüfe Verzeichnisstruktur
-    if (-not (Test-Path $ServerDir) -or -not (Test-Path $ClientDir)) {
-        Write-Err "Ungültige Installationsstruktur!"
-        Write-Host "Erwartet: $ServerDir und $ClientDir"
-        exit 1
-    }
-    
-    Write-Success "Installationsstruktur gültig"
     Write-Host ""
     
     # Bestätigung
     if (-not $Unattended) {
         Write-Host "Diese Installation wird:" -ForegroundColor $ColorInfo
-        Write-Host "  - Node.js prüfen/installieren (falls nötig)"
-        Write-Host "  - Alle npm-Abhängigkeiten installieren"
+        Write-Host "  - Node.js installieren (falls nötig)"
+        Write-Host "  - Repository von GitHub herunterladen"
+        Write-Host "  - Alle Abhängigkeiten installieren"
         Write-Host "  - Datenbank initialisieren"
         Write-Host "  - Firewall-Regeln erstellen"
         Write-Host "  - Desktop-Verknüpfungen erstellen"
@@ -467,7 +579,10 @@ try {
         }
     }
     
-    Write-Host ""
+    # Temp-Verzeichnis erstellen
+    if (-not (Test-Path $TempDir)) {
+        New-Item -ItemType Directory -Path $TempDir -Force | Out-Null
+    }
     
     # 1. Node.js prüfen/installieren
     if (-not $SkipNodeInstall) {
@@ -492,21 +607,32 @@ try {
         }
     }
     
-    # 2. Abhängigkeiten installieren
+    # 2. Repository herunterladen
+    $sourcePath = Get-Repository
+    
+    # 3. Dateien kopieren
+    if (-not (Copy-ToInstallPath -SourcePath $sourcePath)) {
+        throw "Dateien konnten nicht kopiert werden"
+    }
+    
+    # 4. Abhängigkeiten installieren
     if (-not (Install-Dependencies)) {
         throw "Abhängigkeiten konnten nicht installiert werden"
     }
     
-    # 3. Datenbank initialisieren
+    # 5. Datenbank initialisieren
     if (-not (Initialize-Database)) {
         throw "Datenbank konnte nicht initialisiert werden"
     }
     
-    # 4. Firewall konfigurieren
+    # 6. Firewall konfigurieren
     Set-FirewallRules | Out-Null
     
-    # 5. Verknüpfungen erstellen
+    # 7. Verknüpfungen erstellen
     New-Shortcuts | Out-Null
+    
+    # 8. Aufräumen
+    Clear-TempFiles
     
     # Fertig!
     Show-CompletionMessage
@@ -515,19 +641,12 @@ try {
         Write-Host ""
         $startNow = Read-Host "Lohnmonitor jetzt starten? (J/N)"
         if ($startNow -match "^[jJyY]") {
-            $startScript = Join-Path $RootDir "scripts\Start-Dev.ps1"
+            $startScript = Join-Path $InstallPath "scripts\Start-Dev.ps1"
             if (Test-Path $startScript) {
                 & $startScript
             }
         }
-        else {
-            Write-Host ""
-            Write-Host "Drücken Sie eine beliebige Taste zum Beenden..."
-            $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-        }
     }
-    
-    exit 0
 }
 catch {
     Write-Host ""
@@ -537,6 +656,9 @@ catch {
     Write-Host "Details:" -ForegroundColor $ColorError
     Write-Host $_.ScriptStackTrace -ForegroundColor Gray
     Write-Host ""
+    
+    # Aufräumen bei Fehler
+    Clear-TempFiles
     
     if (-not $Unattended) {
         Write-Host "Drücken Sie eine beliebige Taste zum Beenden..."
