@@ -1,4 +1,4 @@
-# Lohnmonitor Enterprise - Backup Script
+﻿# Lohnmonitor Enterprise - Backup Script
 # Erstellt Backups der SQLite-Datenbank
 
 param(

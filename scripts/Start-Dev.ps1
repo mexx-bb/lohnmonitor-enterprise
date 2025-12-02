@@ -1,4 +1,4 @@
-# Lohnmonitor Enterprise - Start Development Script
+﻿# Lohnmonitor Enterprise - Start Development Script
 # Startet Backend und Frontend gleichzeitig
 
 param(

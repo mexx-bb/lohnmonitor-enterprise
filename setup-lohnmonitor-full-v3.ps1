@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
     Lohnmonitor Enterprise - Vollständiges Setup-Skript
     
