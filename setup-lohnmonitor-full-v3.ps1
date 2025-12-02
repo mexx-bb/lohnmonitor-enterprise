@@ -36,8 +36,12 @@ param(
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "Continue"
 
-# Pfade
-$ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Pfade - verwende $PSScriptRoot für zuverlässige Pfadauflösung
+$ScriptDir = $PSScriptRoot
+if (-not $ScriptDir) {
+    # Fallback für Kontexte wo $PSScriptRoot nicht verfügbar ist
+    $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+}
 $RootDir = $ScriptDir
 $ServerDir = Join-Path $RootDir "server"
 $ClientDir = Join-Path $RootDir "client"
