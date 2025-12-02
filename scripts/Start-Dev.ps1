@@ -1,4 +1,4 @@
-# Lohnmonitor Enterprise - Start Development Script
+﻿# Lohnmonitor Enterprise - Start Development Script
 # Startet Backend und Frontend gleichzeitig
 
 param(
@@ -15,11 +15,30 @@ Write-Host "║                Development Mode                            ║" 
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
-# Pfade
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+# Pfade - verwende $PSScriptRoot für zuverlässige Pfadauflösung
+$scriptDir = $PSScriptRoot
+if (-not $scriptDir) {
+    # Fallback für Kontexte wo $PSScriptRoot nicht verfügbar ist
+    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
+}
 $rootDir = Split-Path -Parent $scriptDir
 $serverDir = Join-Path $rootDir "server"
 $clientDir = Join-Path $rootDir "client"
+
+# Validiere dass die Pfade existieren
+if (-not (Test-Path $serverDir)) {
+    Write-Host "[FEHLER] Server-Verzeichnis nicht gefunden: $serverDir" -ForegroundColor Red
+    Write-Host "[INFO] Aktuelles Skript-Verzeichnis: $scriptDir" -ForegroundColor Yellow
+    Write-Host "[INFO] Ermitteltes Root-Verzeichnis: $rootDir" -ForegroundColor Yellow
+    exit 1
+}
+
+if (-not (Test-Path $clientDir)) {
+    Write-Host "[FEHLER] Client-Verzeichnis nicht gefunden: $clientDir" -ForegroundColor Red
+    Write-Host "[INFO] Aktuelles Skript-Verzeichnis: $scriptDir" -ForegroundColor Yellow
+    Write-Host "[INFO] Ermitteltes Root-Verzeichnis: $rootDir" -ForegroundColor Yellow
+    exit 1
+}
 
 # Prüfe ob Node.js installiert ist
 try {
