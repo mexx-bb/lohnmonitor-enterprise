@@ -1,4 +1,4 @@
-﻿# Lohnmonitor Enterprise - Backup Script
+# Lohnmonitor Enterprise - Backup Script
 # Erstellt Backups der SQLite-Datenbank
 
 param(
@@ -13,12 +13,8 @@ Write-Host "║          LOHNMONITOR ENTERPRISE - BACKUP                   ║" 
 Write-Host "╚════════════════════════════════════════════════════════════╝" -ForegroundColor Cyan
 Write-Host ""
 
-# Pfade - verwende $PSScriptRoot für zuverlässige Pfadauflösung
-$scriptDir = $PSScriptRoot
-if (-not $scriptDir) {
-    # Fallback für Kontexte wo $PSScriptRoot nicht verfügbar ist
-    $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
-}
+# Pfade
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $rootDir = Split-Path -Parent $scriptDir
 $serverDir = Join-Path $rootDir "server"
 $dataDir = Join-Path $serverDir "data"
