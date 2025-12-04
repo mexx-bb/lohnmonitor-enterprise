@@ -32,7 +32,7 @@
     "express-session": "^1.18.1",
     "express-validator": "^7.2.1",
     "node-cron": "^3.0.3",
-    "nodemailer": "^6.9.16",
+    "nodemailer": "^7.0.7",
     "pdfmake": "^0.2.15",
     "uuid": "^11.0.3",
     "xlsx": "^0.18.5"
