@@ -7,7 +7,7 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
 const { body, param, validationResult } = require('express-validator');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 const { requireAuth } = require('../middleware/auth');
 const { requireRole, requireAdmin, ROLES } = require('../middleware/roleCheck');
 const { berechneNaechstenAufstieg, ENTGELTGRUPPEN } = require('../services/tarifCalculator');
@@ -360,34 +360,55 @@ router.get('/export/employees', requireRole([ROLES.ADMIN, ROLES.EDITOR]), async 
       };
     });
 
-    // Excel erstellen
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(data);
+    // Excel erstellen mit ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Mitarbeiter');
     
-    // Spaltenbreiten setzen
-    ws['!cols'] = [
-      { wch: 15 }, // Personalnummer
-      { wch: 25 }, // Name
-      { wch: 20 }, // Qualifikation
-      { wch: 15 }, // Abteilung
-      { wch: 12 }, // Eintrittsdatum
-      { wch: 12 }, // Entgeltgruppe
-      { wch: 8 },  // Stufe
-      { wch: 15 }, // Nächster Aufstieg
-      { wch: 12 }, // Wochenstunden
-      { wch: 12 }, // Stundenlohn
-      { wch: 12 }, // Zulage Gruppe
-      { wch: 12 }, // Zulage Schicht
-      { wch: 10 }, // TL 100
-      { wch: 10 }, // TL 150
-      { wch: 12 }, // Brutto
-      { wch: 8 }   // Aktiv
+    // Spaltenüberschriften definieren
+    const columns = [
+      { header: 'Personalnummer', key: 'personalnummer', width: 15 },
+      { header: 'Name', key: 'name', width: 25 },
+      { header: 'Qualifikation', key: 'qualifikation', width: 20 },
+      { header: 'Abteilung', key: 'abteilung', width: 15 },
+      { header: 'Eintrittsdatum', key: 'eintrittsdatum', width: 12 },
+      { header: 'Entgeltgruppe', key: 'entgeltgruppe', width: 12 },
+      { header: 'Stufe', key: 'stufe', width: 8 },
+      { header: 'Nächster Aufstieg', key: 'naechsterAufstieg', width: 15 },
+      { header: 'Wochenstunden', key: 'wochenstunden', width: 12 },
+      { header: 'Stundenlohn', key: 'stundenlohn', width: 12 },
+      { header: 'Zulage Gruppe', key: 'zulageGruppe', width: 12 },
+      { header: 'Zulage Schicht', key: 'zulageSchicht', width: 12 },
+      { header: 'TL 100€', key: 'tl100', width: 10 },
+      { header: 'TL 150€', key: 'tl150', width: 10 },
+      { header: 'Brutto Gesamt', key: 'bruttoGesamt', width: 12 },
+      { header: 'Aktiv', key: 'aktiv', width: 8 }
     ];
+    worksheet.columns = columns;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Mitarbeiter');
+    // Daten hinzufügen
+    data.forEach(row => {
+      worksheet.addRow({
+        personalnummer: row['Personalnummer'],
+        name: row['Name'],
+        qualifikation: row['Qualifikation'],
+        abteilung: row['Abteilung'],
+        eintrittsdatum: row['Eintrittsdatum'],
+        entgeltgruppe: row['Entgeltgruppe'],
+        stufe: row['Stufe'],
+        naechsterAufstieg: row['Nächster Aufstieg'],
+        wochenstunden: row['Wochenstunden'],
+        stundenlohn: row['Stundenlohn'],
+        zulageGruppe: row['Zulage Gruppe'],
+        zulageSchicht: row['Zulage Schicht'],
+        tl100: row['TL 100€'],
+        tl150: row['TL 150€'],
+        bruttoGesamt: row['Brutto Gesamt'],
+        aktiv: row['Aktiv']
+      });
+    });
 
     // Buffer erstellen
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = await workbook.xlsx.writeBuffer();
 
     // Audit Log
     await prisma.auditLog.create({
@@ -429,11 +450,32 @@ router.post('/import/employees', requireRole([ROLES.ADMIN, ROLES.EDITOR]), async
     if (Array.isArray(data)) {
       employees = data;
     } else {
-      // Base64 Excel dekodieren
+      // Base64 Excel dekodieren mit ExcelJS
       const buffer = Buffer.from(data, 'base64');
-      const wb = XLSX.read(buffer, { type: 'buffer' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      employees = XLSX.utils.sheet_to_json(ws);
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer);
+      const worksheet = workbook.worksheets[0];
+      
+      // Erste Zeile als Header lesen (using object to avoid sparse array)
+      const headers = {};
+      worksheet.getRow(1).eachCell((cell, colNumber) => {
+        headers[colNumber] = cell.value;
+      });
+      
+      // Datenzeilen lesen
+      worksheet.eachRow((row, rowNumber) => {
+        if (rowNumber === 1) return; // Header überspringen
+        const rowData = {};
+        row.eachCell((cell, colNumber) => {
+          const header = headers[colNumber];
+          if (header) {
+            rowData[header] = cell.value;
+          }
+        });
+        if (Object.keys(rowData).length > 0) {
+          employees.push(rowData);
+        }
+      });
     }
 
     if (!employees.length) {
@@ -563,7 +605,7 @@ router.post('/import/employees', requireRole([ROLES.ADMIN, ROLES.EDITOR]), async
  * GET /api/admin/import/template
  * Download Import-Vorlage
  */
-router.get('/import/template', requireRole([ROLES.ADMIN, ROLES.EDITOR]), (req, res) => {
+router.get('/import/template', requireRole([ROLES.ADMIN, ROLES.EDITOR]), async (req, res) => {
   try {
     const template = [
       {
@@ -598,18 +640,48 @@ router.get('/import/template', requireRole([ROLES.ADMIN, ROLES.EDITOR]), (req, r
       }
     ];
 
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(template);
+    // Excel erstellen mit ExcelJS
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Import-Vorlage');
     
-    ws['!cols'] = [
-      { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 15 },
-      { wch: 15 }, { wch: 12 }, { wch: 8 }, { wch: 12 },
-      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 10 }
+    // Spaltenüberschriften definieren
+    const columns = [
+      { header: 'Personalnummer', key: 'personalnummer', width: 15 },
+      { header: 'Name', key: 'name', width: 25 },
+      { header: 'Qualifikation', key: 'qualifikation', width: 20 },
+      { header: 'Abteilung', key: 'abteilung', width: 15 },
+      { header: 'Eintrittsdatum', key: 'eintrittsdatum', width: 15 },
+      { header: 'Entgeltgruppe', key: 'entgeltgruppe', width: 12 },
+      { header: 'Stufe', key: 'stufe', width: 8 },
+      { header: 'Wochenstunden', key: 'wochenstunden', width: 12 },
+      { header: 'Stundenlohn', key: 'stundenlohn', width: 12 },
+      { header: 'Zulage Gruppe', key: 'zulageGruppe', width: 12 },
+      { header: 'Zulage Schicht', key: 'zulageSchicht', width: 12 },
+      { header: 'TL 100€', key: 'tl100', width: 10 },
+      { header: 'TL 150€', key: 'tl150', width: 10 }
     ];
+    worksheet.columns = columns;
 
-    XLSX.utils.book_append_sheet(wb, ws, 'Import-Vorlage');
+    // Daten hinzufügen
+    template.forEach(row => {
+      worksheet.addRow({
+        personalnummer: row['Personalnummer'],
+        name: row['Name'],
+        qualifikation: row['Qualifikation'],
+        abteilung: row['Abteilung'],
+        eintrittsdatum: row['Eintrittsdatum'],
+        entgeltgruppe: row['Entgeltgruppe'],
+        stufe: row['Stufe'],
+        wochenstunden: row['Wochenstunden'],
+        stundenlohn: row['Stundenlohn'],
+        zulageGruppe: row['Zulage Gruppe'],
+        zulageSchicht: row['Zulage Schicht'],
+        tl100: row['TL 100€'],
+        tl150: row['TL 150€']
+      });
+    });
     
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const buffer = await workbook.xlsx.writeBuffer();
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename="Mitarbeiter_Import_Vorlage.xlsx"');
