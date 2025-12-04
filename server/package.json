@@ -3,6 +3,9 @@
   "version": "3.0.0",
   "description": "Backend für Lohnmonitor Enterprise - Pflegedienst Lohnverwaltung",
   "main": "index.js",
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
