@@ -1,0 +1,21 @@
+# Docker ignore for backend server
+node_modules/
+npm-debug.log*
+.env
+.env.local
+.env.production
+*.db
+*.db-journal
+data/
+logs/
+*.log
+.git
+.gitignore
+Dockerfile
+.dockerignore
+README.md
+*.md
+.vscode/
+.idea/
+*.swp
+*.swo
