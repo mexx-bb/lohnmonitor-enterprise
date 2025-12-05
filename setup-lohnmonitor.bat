@@ -32,8 +32,8 @@ echo.
 
 set INSTALL_PATH=C:\Programme\LohnmonitorEnterprise
 set TEMP_DIR=%TEMP%\lohnmonitor-download
-set GITHUB_REPO=https://github. com/mexx-bb/lohnmonitor-enterprise
-set ZIP_FILE=%TEMP_DIR%\lohnmonitor-enterprise. zip
+set GITHUB_REPO=https://github.com/mexx-bb/lohnmonitor-enterprise
+set ZIP_FILE=%TEMP_DIR%\lohnmonitor-enterprise.zip
 set SETUP_SCRIPT=setup-lohnmonitor-full-v3.ps1
 
 echo [INFO] Installationspfad: %INSTALL_PATH%
@@ -68,7 +68,7 @@ if %errorLevel% equ 0 (
     )
     
     cd /d "%TEMP_DIR%"
-    git clone %GITHUB_REPO%. git lohnmonitor-enterprise
+    git clone %GITHUB_REPO%.git lohnmonitor-enterprise
     
     if %errorLevel% equ 0 (
         echo [OK] Repository geklont
