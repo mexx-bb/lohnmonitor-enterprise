@@ -72,7 +72,7 @@ if %errorLevel% equ 0 (
     
     if %errorLevel% equ 0 (
         echo [OK] Repository geklont
-        mkdir "%INSTALL_PATH%"
+        if not exist "%INSTALL_PATH%" mkdir "%INSTALL_PATH%"
         xcopy "%TEMP_DIR%\lohnmonitor-enterprise\*" "%INSTALL_PATH%\" /E /I /Y
         echo [OK] Dateien nach %INSTALL_PATH% kopiert
     ) else (
@@ -157,7 +157,7 @@ echo [OK] ZIP entpackt
 echo.
 
 for /d %%D in ("%TEMP_DIR%\lohnmonitor-enterprise-*") do (
-    mkdir "%INSTALL_PATH%"
+    if not exist "%INSTALL_PATH%" mkdir "%INSTALL_PATH%"
     xcopy "%%D\*" "%INSTALL_PATH%\" /E /I /Y
 )
 
